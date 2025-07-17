@@ -1,0 +1,31 @@
+# =================================================================================
+# Ansible Playbook for Server Configuration
+#
+# This playbook connects to the newly created server and installs Nginx and
+# Neofetch.
+# =================================================================================
+
+- name: Configure Web Server
+  hosts: all
+  become: yes # Use 'sudo' to execute commands
+  tasks:
+    - name: Update apt package cache
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600 # Update only if cache is older than 1 hour
+      
+    - name: Install Nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+
+    - name: Install Neofetch
+      ansible.builtin.apt:
+        name: neofetch
+        state: present
+
+    - name: Ensure Nginx service is started and enabled on boot
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: yes
