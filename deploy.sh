@@ -2,77 +2,75 @@
 
 set -e
 
-# --- Configuration ---
+# Log Functions -------------------------------------------
+log()        { echo -e "[+] $1"; }
+log_ok()     { echo -e "[\033[0;32mDONE\033[0m] $1"; }
+log_fail()   { echo -e "[\033[0;31mFAIL\033[0m] $1"; }
+log_wait()   { echo -e "[\033[0;33mWAIT\033[0m] $1"; }
+
+# Variables -----------------------------------------------
 PRIVATE_KEY="terraform-key"
 ANSIBLE_USER="ubuntu"
 INVENTORY_FILE="hosts"
 
-# --- Pre-flight Check ---
-echo "🔎 Checking for SSH private key: $PRIVATE_KEY"
+# Pre-Checking --------------------------------------------
+log "Checking for SSH private key: $PRIVATE_KEY"
 if [ ! -f "$PRIVATE_KEY" ]; then
-    echo "❌ Error: Private key '$PRIVATE_KEY' not found."
-    echo "Please create it by running: ssh-keygen -t rsa -b 4096 -f $PRIVATE_KEY -N ''"
+    log_fail "Private key '$PRIVATE_KEY' not found."
+    echo "Please create it by running: ssh-keygen -t rsa -b 4096 -f $PRIVATE_KEY"
     exit 1
 fi
 
-# --- Set Key Permissions ---
-echo "🔐 Setting secure permissions for the private key..."
+# Set Key Permissions -------------------------------------
+log "Setting secure permissions for the private key..."
 chmod 400 "$PRIVATE_KEY"
-echo "✅ Permissions set to 400 for $PRIVATE_KEY."
+log_ok "Permissions set to 400 for $PRIVATE_KEY."
 
-# --- Terraform Provisioning ---
-echo "🚀 Initializing Terraform..."
+# Terraform Provisioning ----------------------------------
+log "Initializing Terraform..."
 terraform init -input=false
 
-echo "🏗️ Applying Terraform plan... This may take a few minutes."
+log "Applying Terraform plan... This may take a few minutes."
 terraform apply -auto-approve
+log_ok "Terraform provisioning complete."
 
-# --- Ansible Configuration ---
-echo "✅ Terraform provisioning complete."
-echo "🔎 Retrieving public IP address..."
+# Ansible Configuration -----------------------------------
+log "Retrieving public IP address..."
 
 PUBLIC_IP=$(terraform output -raw public_ip)
 
 if [ -z "$PUBLIC_IP" ]; then
-    echo "❌ Error: Could not retrieve public IP address from Terraform output."
+    log_fail "Error: Could not retrieve public IP address from Terraform output."
     exit 1
 fi
 
-echo "✅ Server IP is: $PUBLIC_IP"
-echo "📝 Creating Ansible inventory file..."
+log_ok "Server IP is: $PUBLIC_IP"
+log "Creating Ansible inventory file..."
 
-# Create a dynamic inventory file for Ansible.
-# We add ansible_ssh_common_args to ensure Ansible also only uses the specified key.
+# Create a dynamic inventory file for Ansible. Added ansible_ssh_common_args to ensure Ansible also only uses the specified key.
 cat << EOF > $INVENTORY_FILE
 [webserver]
 $PUBLIC_IP ansible_user=$ANSIBLE_USER ansible_ssh_private_key_file=./$PRIVATE_KEY ansible_ssh_common_args='-o StrictHostKeyChecking=no -o IdentitiesOnly=yes'
 EOF
 
-echo "✅ Inventory file '$INVENTORY_FILE' created."
+log_ok "Inventory file '$INVENTORY_FILE' created."
 
-# --- Wait for SSH (FINAL FIX) ---
-echo "⏳ Waiting for SSH to become available on $PUBLIC_IP..."
+# Wait for SSH ------------------------------------------------
+log_wait "Waiting for SSH to become available on $PUBLIC_IP..."
 echo "(This can take a minute or two for the instance to boot and start sshd...)"
-
-# This loop attempts to connect to the server's port 22.
-# The key fix is adding '-o IdentitiesOnly=yes' to force SSH to use ONLY the
-# key we specify with the -i flag, ignoring the ssh-agent.
 until ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -o ConnectionAttempts=1 -o ConnectTimeout=10 -i "$PRIVATE_KEY" "${ANSIBLE_USER}@${PUBLIC_IP}" echo "SSH is ready!" &>/dev/null; do
     printf "."
     sleep 5
 done
 
-echo "✅ SSH is up and ready!"
+log_ok "SSH is up and ready!"
 
-# --- Run Ansible Playbook ---
-echo "⚙️ Running Ansible playbook to configure the server..."
-
-# We no longer need to set ANSIBLE_HOST_KEY_CHECKING=False because it's handled
-# in the inventory file now.
+# Run Ansible Playbook ----------------------------------------
+log "Running Ansible playbook to configure the server..."
 ansible-playbook -i $INVENTORY_FILE playbook.yml
 
-# --- Finish ---
-echo "🎉🚀 Deployment Complete! 🚀🎉"
+# Finish ------------------------------------------------------
+log_ok "🎉🚀 Deployment Complete! 🚀🎉"
 echo ""
 echo "You can access your web server at: http://$PUBLIC_IP"
 echo "You can SSH into your server with: ssh -o IdentitiesOnly=yes -i $PRIVATE_KEY ${ANSIBLE_USER}@${PUBLIC_IP}"

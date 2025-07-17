@@ -1,6 +1,9 @@
 # AWS EC2 - Automated Configuration
 
+[![My Skills](https://skillicons.dev/icons?i=aws,terraform,ansible,bash)](https://skillicons.dev)
+
 This project contains a fully automated pipeline that deploys an Ubuntu EC2 instance on AWS with proper networking setup and security configurations using Terraform, Ansible and bash scripts.
+
 
 ## Step by Step Flow
 
@@ -127,7 +130,11 @@ echo 'export PATH=$PATH:$HOME/.local/bin' >> ~/.profile && source ~/.profile
    bash deploy.sh
    ```
 
-3. Run the `destroy.sh` script to destroy/terminate the instance.
+3. You can now:
+   - Visit the Public IP address to access the Nginx server on port 80.
+   - SSH into the instance via SSH and run `neofetch`.
+
+4. Run the `destroy.sh` script to destroy/terminate the instance.
 
    ```bash
    bash deploy.sh
@@ -141,3 +148,19 @@ echo 'export PATH=$PATH:$HOME/.local/bin' >> ~/.profile && source ~/.profile
 - `playbook.yml` - Ansible playbook for instance configuration
 
 > The AWS security group is configured to allow inbound SSH and HTTP access from any IP (0.0.0.0/0). In a production environment, you should restrict these to specific IP (your IP).
+
+## Screenshots
+
+### `deploy.sh` script
+
+<img src="./repo/screenshots/deploy-sh-start.png" alt="deploy.sh (start)">
+<img src="./repo/screenshots/deploy-sh-end.png" alt="deploy.sh (end)">
+
+### Deployed AWS Instance
+
+<img src="./repo/screenshots/aws-instances.png" alt="aws instance">
+
+### `destroy.sh` script
+
+<img src="./repo/screenshots/destroy-sh-start.png" alt="destroy.sh (start)">
+<img src="./repo/screenshots/destroy-sh-end.png" alt="destroy.sh (end)">
